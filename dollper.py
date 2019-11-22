@@ -156,15 +156,20 @@ async def download_set(s: Set, session):
     to_folder = f"./dl/{s.title}"
     os.makedirs(to_folder, exist_ok=True)
 
-    if os.path.isfile(to_folder + "/info.txt"):
+    info_file = to_folder + "/info.txt"
+    if os.path.isfile(info_file):
         logging.info("Set already complete %s", s.title)
         return
 
-    # TODO
-    # for image in s.images:
-    #     await download_image(image, to_folder, session)
-    await asyncio.gather(*(download_image(image, to_folder, session) for image in s.images))
-    with open("info.txt", "w") as f:
+    pool = 20
+    tmp = s.images.copy()
+    while True:
+        await asyncio.gather(*(download_image(image, to_folder, session) for image in tmp[:pool]))
+        tmp = tmp[pool:]
+        if not tmp:
+            break
+
+    with open(info_file, "w") as f:
         f.write(f"Set url: {s.url}")
 
 
