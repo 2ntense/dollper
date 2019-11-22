@@ -141,7 +141,7 @@ async def download_image(image: Image, dest: str, session):
         return
 
     logging.info("Downloading %s", filename)
-    with async_timeout.timeout(10):
+    with async_timeout.timeout(120):
         async with session.get(image.image_url) as resp:
             async with aiofiles.open(filename, 'wb') as fd:
                 while True:
