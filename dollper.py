@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO)
 root_url = private.root_url_
+done_file = "done.txt"
 
 
 async def get_html(url, session):
@@ -171,16 +172,15 @@ async def download_page(page, session):
     # await asyncio.gather(*(download_set(s, session) for s in page.sets))
     for s in page.sets:
         await download_set(s, session)
-    with open("done.txt", "a+") as f:
+    with open(done_file, "a+") as f:
         f.write(str(page.id) + "\n")
 
 
 async def main():
-    save_file = "done.txt"
     last_page = 1617
     pages_to_fetch = list(range(1, last_page + 1))
-    if os.path.isfile(save_file):
-        with open(save_file) as f:
+    if os.path.isfile(done_file):
+        with open(done_file) as f:
             pages_done = [int(x) for x in f.read().splitlines()]
             pages_to_fetch = [x for x in pages_to_fetch if x not in pages_done]
             pages_to_fetch.sort()
@@ -190,28 +190,6 @@ async def main():
         for page in pages:
             await page.parse()
             await download_page(page, session)
-
-    # async with ClientSession() as session:
-    #
-    #     pages = [Page(id=i, session=session) for i in pages_to_fetch]
-    #
-    #     pool = 2
-    #     b = 0
-    #     e = pool
-    #
-    #     if e <= len(pages):
-    #         while True:
-    #             pages_ = pages[b:e]
-    #             await asyncio.gather(*(page.parse() for page in pages[b:e]))
-    #             await asyncio.gather(*(download_page(page, session) for page in pages[b:e]))
-    #             b += pool
-    #             e += pool
-    #             if e > len(pages):
-    #                 break
-    #     else:
-    #         await asyncio.gather(*(page.parse() for page in pages))
-    #         logging.info("Begin download of images")
-    #         await asyncio.gather(*(download_page(page, session) for page in pages))
 
 
 if __name__ == '__main__':
