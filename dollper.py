@@ -31,10 +31,10 @@ class Image:
     id: int = None
 
     async def parse_image(self):
-        logging.info("Fetching image page %s", self.page_url)
+        logging.debug("Fetching image page %s", self.page_url)
         html = await get_html(self.page_url, self.session)
 
-        logging.info("Parsing image from image page %s", self.page_url)
+        logging.debug("Parsing image from image page %s", self.page_url)
         soup = BeautifulSoup(html, "html.parser")
 
         match = soup.find(class_=private.class_)
@@ -61,10 +61,10 @@ class Set:
         if set_page_url is None:
             set_page_url = self.url
 
-        logging.info("Fetching set %s", set_page_url)
+        logging.debug("Fetching set %s", set_page_url)
         html = await get_html(set_page_url, self.session)
 
-        logging.info("Parsing set for images %s", set_page_url)
+        logging.debug("Parsing set for images %s", set_page_url)
         soup = BeautifulSoup(html, "html.parser")
 
         matches = soup.find_all(class_="image")
@@ -82,7 +82,7 @@ class Set:
         for row in nav_bar:
             if "Next Page" in str(row):
                 next_page_url = root_url + row["href"]
-                logging.info("Set has next page %s -> %s", set_page_url, next_page_url)
+                logging.debug("Set has next page %s -> %s", set_page_url, next_page_url)
                 await self.parse_image_pages(set_page_url=next_page_url)
 
     async def parse_images(self):
@@ -102,15 +102,15 @@ class Page:
         self.url = f"{root_url}/page-{self.id}.html"
 
     async def parse_sets(self):
-        logging.info("Fetching page %d", self.id)
+        logging.debug("Fetching page %d", self.id)
         html = await get_html(self.url, self.session)
 
-        logging.info("Parsing sets from page %d", self.id)
+        logging.debug("Parsing sets from page %d", self.id)
         soup = BeautifulSoup(html, "html.parser")
         matches = soup.find_all(class_="picbox")
 
         if not matches:
-            logging.info("No sets found %s", self.url)
+            logging.debug("No sets found %s", self.url)
             return
 
         for m in matches:
@@ -127,20 +127,20 @@ class Page:
 
 async def download_image(image: Image, dest: str, session):
     if not os.path.isdir(dest):
-        logging.info("Output folder doesn't exist %s", dest)
+        logging.debug("Output folder doesn't exist %s", dest)
         return
 
     if not image.image_url:
-        logging.info("Image has no URL")
+        logging.debug("Image has no URL")
         return
 
     filename = f"{dest}/{image.id}.{image.image_url.split('.')[-1]}"
 
     if os.path.isfile(filename):
-        logging.info("Image already exists (skipping) %s", filename)
+        logging.debug("Image already exists (skipping) %s", filename)
         return
 
-    logging.info("Downloading %s", filename)
+    logging.debug("Downloading %s", filename)
     with async_timeout.timeout(120):
         async with session.get(image.image_url) as resp:
             async with aiofiles.open(filename, 'wb') as fd:
@@ -158,7 +158,7 @@ async def download_set(s: Set, session):
 
     info_file = to_folder + "/info.txt"
     if os.path.isfile(info_file):
-        logging.info("Set already complete %s", s.title)
+        logging.debug("Set already complete %s", s.title)
         return
 
     pool = 20
@@ -175,6 +175,8 @@ async def download_set(s: Set, session):
 
 async def download_page(page, session):
     # await asyncio.gather(*(download_set(s, session) for s in page.sets))
+    logging.info("Downloading page %d", page.id)
+
     for s in page.sets:
         await download_set(s, session)
     with open(done_file, "a+") as f:
@@ -203,4 +205,4 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
-    logging.info("Elapsed time %fs", (time.time() - start))
+    logging.debug("Elapsed time %fs", (time.time() - start))
